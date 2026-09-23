@@ -1,3 +1,9 @@
+export interface RendimentoMensal {
+  ano: number;
+  mes: number;
+  rendimento: number;
+}
+
 export interface Caixinha {
   id: number;
   nome: string;
@@ -12,7 +18,9 @@ export interface Caixinha {
   totalAportado: number;
   totalResgatado: number;
   rendimentoAcumulado: number;
-  rentabilidadePercentual: number;
+  /** Media, em R$, do quanto rendeu por mes (meses com rendimento). */
+  rentabilidadeMediaMensal: number;
+  historicoMensal: RendimentoMensal[];
   percentualMeta?: number | null;
   quantidadeMovimentacoes: number;
   ultimaMovimentacao?: string | null;

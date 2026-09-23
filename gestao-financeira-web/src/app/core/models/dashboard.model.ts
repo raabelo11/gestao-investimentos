@@ -1,4 +1,4 @@
-import { Caixinha } from './caixinha.model';
+import { Caixinha, RendimentoMensal } from './caixinha.model';
 
 export interface PontoEvolucao {
   data: string;
@@ -11,10 +11,12 @@ export interface Dashboard {
   patrimonioTotal: number;
   capitalInvestidoTotal: number;
   rendimentoAcumuladoTotal: number;
-  rentabilidadePercentualGeral: number;
+  /** Media, em R$, do quanto rendeu por mes somando todas as caixinhas. */
+  rentabilidadeMediaMensalGeral: number;
   totalAportado: number;
   totalResgatado: number;
   quantidadeCaixinhas: number;
   caixinhas: Caixinha[];
   evolucaoPatrimonio: PontoEvolucao[];
+  historicoMensal: RendimentoMensal[];
 }

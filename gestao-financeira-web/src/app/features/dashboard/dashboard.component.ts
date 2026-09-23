@@ -47,4 +47,13 @@ export class DashboardComponent implements OnInit {
     if (total <= 0) return 0;
     return Math.min(100, (saldo / total) * 100);
   }
+
+  private static readonly MESES = [
+    'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
+  ];
+
+  protected nomeMes(mes: number): string {
+    return DashboardComponent.MESES[mes - 1] ?? String(mes);
+  }
 }

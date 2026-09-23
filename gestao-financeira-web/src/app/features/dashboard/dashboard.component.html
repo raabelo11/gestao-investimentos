@@ -55,13 +55,13 @@
 
       <div class="stat card">
         <div class="stat-ico" style="background: var(--warning-soft); color: #fbbf24">
-          <span class="msr">percent</span>
+          <span class="msr">calendar_month</span>
         </div>
         <div class="stat-body">
-          <span class="stat-label">Rentabilidade</span>
-          <strong class="stat-value" [class.pos]="d.rentabilidadePercentualGeral > 0"
-            [class.neg]="d.rentabilidadePercentualGeral < 0">
-            {{ d.rentabilidadePercentualGeral | number: '1.2-2' }}%
+          <span class="stat-label">Rentabilidade (média/mês)</span>
+          <strong class="stat-value" [class.pos]="d.rentabilidadeMediaMensalGeral > 0"
+            [class.neg]="d.rentabilidadeMediaMensalGeral < 0">
+            {{ d.rentabilidadeMediaMensalGeral | currency: 'BRL' }}
           </strong>
         </div>
       </div>
@@ -92,12 +92,38 @@
               <strong>{{ d.totalResgatado | currency: 'BRL' }}</strong>
             </div>
             <div class="resumo-row">
+              <span class="muted">Total de rendimento</span>
+              <strong [class.pos]="d.rendimentoAcumuladoTotal > 0"
+                [class.neg]="d.rendimentoAcumuladoTotal < 0">
+                {{ d.rendimentoAcumuladoTotal | currency: 'BRL' }}
+              </strong>
+            </div>
+            <div class="resumo-row">
               <span class="muted">Caixinhas ativas</span>
               <strong>{{ d.quantidadeCaixinhas }}</strong>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Historico mensal de rendimento -->
+      @if (d.historicoMensal.length > 0) {
+        <div class="card panel">
+          <div class="panel-head">
+            <h3>Histórico de rendimento por mês</h3>
+          </div>
+          <div class="hist-mensal">
+            @for (m of d.historicoMensal; track m.ano + '-' + m.mes) {
+              <div class="hist-row">
+                <span class="muted">{{ nomeMes(m.mes) }}/{{ m.ano }}</span>
+                <strong [class.pos]="m.rendimento > 0" [class.neg]="m.rendimento < 0">
+                  {{ m.rendimento | currency: 'BRL' }}
+                </strong>
+              </div>
+            }
+          </div>
+        </div>
+      }
 
       <!-- Caixinhas -->
       <div class="section-head">
@@ -131,7 +157,7 @@
                 <span class="msr">{{ c.rendimentoAcumulado >= 0 ? 'trending_up' : 'trending_down' }}</span>
                 {{ c.rendimentoAcumulado | currency: 'BRL' }}
               </span>
-              <span class="badge badge-neutral">{{ c.rentabilidadePercentual | number: '1.2-2' }}%</span>
+              <span class="badge badge-neutral">{{ c.rentabilidadeMediaMensal | currency: 'BRL' }}/mês</span>
             </div>
 
             @if (c.meta && c.percentualMeta != null) {

@@ -178,3 +178,18 @@
   .mov-valor { grid-area: valor; }
   .mov-acoes { grid-area: acoes; justify-content: flex-end; }
 }
+
+.hist-mensal {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 2px 24px;
+  padding: 8px 20px;
+}
+.hist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}

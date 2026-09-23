@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -36,7 +36,7 @@ const CORES = [
 
 @Component({
   selector: 'app-caixinhas',
-  imports: [CurrencyPipe, DecimalPipe, RouterLink, ReactiveFormsModule, ModalComponent],
+  imports: [CurrencyPipe, RouterLink, ReactiveFormsModule, ModalComponent],
   templateUrl: './caixinhas.component.html',
   styleUrl: './caixinhas.component.scss',
 })

@@ -30,14 +30,20 @@ namespace GestaoFinanceira.Controllers
                 .ToListAsync();
 
             var resumos = new List<CaixinhaResumoDTO>();
-            var pontosPorData = new SortedDictionary<DateTime, PontoEvolucaoDTO>();
+            var evolucoesPorCaixinha = new List<IReadOnlyList<PontoEvolucaoDTO>>();
+            var rendimentoPorMes = new SortedDictionary<DateTime, decimal>();
 
             foreach (var caixinha in caixinhas)
             {
                 var resultado = _calculo.Processar(caixinha.Movimentacoes);
                 resumos.Add(_calculo.MontarResumo(caixinha, resultado));
-                AcumularEvolucao(pontosPorData, resultado.Evolucao);
+                evolucoesPorCaixinha.Add(resultado.Evolucao);
+                AcumularHistoricoMensal(rendimentoPorMes, resultado.HistoricoMensal);
             }
+
+            var historicoMensal = rendimentoPorMes
+                .Select(kv => new RendimentoMensalDTO { Ano = kv.Key.Year, Mes = kv.Key.Month, Rendimento = kv.Value })
+                .ToList();
 
             var dashboard = new DashboardDTO
             {
@@ -48,44 +54,87 @@ namespace GestaoFinanceira.Controllers
                 TotalAportado = resumos.Sum(r => r.TotalAportado),
                 TotalResgatado = resumos.Sum(r => r.TotalResgatado),
                 Caixinhas = resumos.OrderByDescending(r => r.SaldoAtual).ToList(),
-                EvolucaoPatrimonio = pontosPorData.Values.ToList()
+                EvolucaoPatrimonio = ConsolidarEvolucao(evolucoesPorCaixinha),
+                HistoricoMensal = historicoMensal
             };
 
-            dashboard.RentabilidadePercentualGeral = dashboard.CapitalInvestidoTotal > 0m
-                ? Math.Round(dashboard.RendimentoAcumuladoTotal / dashboard.CapitalInvestidoTotal * 100m, 2, MidpointRounding.AwayFromZero)
+            // Rentabilidade consolidada: media em R$ por mes que teve rendimento.
+            var mesesComRendimento = historicoMensal.Count(h => h.Rendimento != 0m);
+            dashboard.RentabilidadeMediaMensalGeral = mesesComRendimento > 0
+                ? Math.Round(dashboard.RendimentoAcumuladoTotal / mesesComRendimento, 2, MidpointRounding.AwayFromZero)
                 : 0m;
 
             return Ok(dashboard);
         }
 
+        /// <summary>Soma o rendimento mensal de uma caixinha ao acumulado geral.</summary>
+        private static void AcumularHistoricoMensal(
+            SortedDictionary<DateTime, decimal> destino,
+            IReadOnlyList<RendimentoMensalDTO> origem)
+        {
+            foreach (var mes in origem)
+            {
+                var chave = new DateTime(mes.Ano, mes.Mes, 1);
+                destino.TryGetValue(chave, out var acum);
+                destino[chave] = acum + mes.Rendimento;
+            }
+        }
+
         /// <summary>
         /// Consolida a evolucao de varias caixinhas em uma unica serie de patrimonio.
-        /// Cada data acumula o ultimo estado conhecido de cada caixinha.
+        /// Para cada dia da uniao de datas, soma o ULTIMO estado conhecido de cada
+        /// caixinha ate aquele dia (forward-fill), evitando que a linha "caia" nos
+        /// dias em que uma caixinha nao teve movimentacao.
         /// </summary>
-        private static void AcumularEvolucao(
-            SortedDictionary<DateTime, PontoEvolucaoDTO> destino,
-            IReadOnlyList<PontoEvolucaoDTO> origem)
+        private static List<PontoEvolucaoDTO> ConsolidarEvolucao(
+            IReadOnlyList<IReadOnlyList<PontoEvolucaoDTO>> evolucoes)
         {
-            foreach (var ponto in origem)
+            var datas = evolucoes
+                .SelectMany(e => e.Select(p => p.Data.Date))
+                .Distinct()
+                .OrderBy(d => d)
+                .ToList();
+
+            var consolidado = new List<PontoEvolucaoDTO>(datas.Count);
+
+            foreach (var dia in datas)
             {
-                var dia = ponto.Data.Date;
-                if (destino.TryGetValue(dia, out var existente))
+                decimal saldo = 0m, capital = 0m, rendimento = 0m;
+
+                foreach (var evolucao in evolucoes)
                 {
-                    existente.Saldo += ponto.Saldo;
-                    existente.CapitalInvestido += ponto.CapitalInvestido;
-                    existente.RendimentoAcumulado += ponto.RendimentoAcumulado;
-                }
-                else
-                {
-                    destino[dia] = new PontoEvolucaoDTO
+                    // Ultimo ponto da caixinha ate (e inclusive) este dia.
+                    PontoEvolucaoDTO? ultimo = null;
+                    foreach (var ponto in evolucao)
                     {
-                        Data = dia,
-                        Saldo = ponto.Saldo,
-                        CapitalInvestido = ponto.CapitalInvestido,
-                        RendimentoAcumulado = ponto.RendimentoAcumulado
-                    };
+                        if (ponto.Data.Date <= dia)
+                        {
+                            ultimo = ponto;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    if (ultimo is not null)
+                    {
+                        saldo += ultimo.Saldo;
+                        capital += ultimo.CapitalInvestido;
+                        rendimento += ultimo.RendimentoAcumulado;
+                    }
                 }
+
+                consolidado.Add(new PontoEvolucaoDTO
+                {
+                    Data = dia,
+                    Saldo = saldo,
+                    CapitalInvestido = capital,
+                    RendimentoAcumulado = rendimento
+                });
             }
+
+            return consolidado;
         }
     }
 }

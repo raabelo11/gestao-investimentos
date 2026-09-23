@@ -9,12 +9,17 @@ namespace GestaoFinanceira.Services
     ///
     /// Regras por tipo:
     /// - Aporte:     aumenta capital investido e saldo.
-    /// - Resgate:    diminui capital investido e saldo.
+    /// - Resgate:    diminui APENAS o saldo. O capital investido nao diminui
+    ///               (o que ja foi investido continua contabilizado como investido)
+    ///               e o rendimento nao e afetado.
     /// - Rendimento: aumenta saldo e rendimento acumulado (nao mexe no capital).
     /// - Saldo:      foto do saldo total naquela data. O rendimento implicito e a
     ///               diferenca entre o saldo informado e o saldo esperado ate entao;
     ///               esse rendimento entra no acumulado. Assim, mesmo lancando o saldo
     ///               esporadicamente, o sistema reconcilia "quanto rendeu ate hoje".
+    ///
+    /// Rentabilidade: media mensal em R$ do quanto rendeu por mes, considerando
+    /// apenas os meses que tiveram rendimento (ver <see cref="RentabilidadeMediaMensal"/>).
     /// </summary>
     public class CalculoInvestimentoService
     {
@@ -25,9 +30,10 @@ namespace GestaoFinanceira.Services
             decimal TotalAportado,
             decimal TotalResgatado,
             decimal RendimentoAcumulado,
-            decimal RentabilidadePercentual,
+            decimal RentabilidadeMediaMensal,
             IReadOnlyDictionary<int, decimal> RendimentoDerivadoPorMovimentacao,
-            IReadOnlyList<PontoEvolucaoDTO> Evolucao);
+            IReadOnlyList<PontoEvolucaoDTO> Evolucao,
+            IReadOnlyList<RendimentoMensalDTO> HistoricoMensal);
 
         public ResultadoCaixinha Processar(IEnumerable<Movimentacao> movimentacoes)
         {
@@ -44,9 +50,13 @@ namespace GestaoFinanceira.Services
 
             var rendimentoDerivado = new Dictionary<int, decimal>();
             var evolucao = new List<PontoEvolucaoDTO>();
+            // Rendimento (explicito + derivado) somado por mes de competencia.
+            var rendimentoPorMes = new SortedDictionary<DateTime, decimal>();
 
             foreach (var mov in ordenadas)
             {
+                decimal rendimentoDoEvento = 0m;
+
                 switch (mov.Tipo)
                 {
                     case TipoMovimentacao.Aporte:
@@ -56,13 +66,15 @@ namespace GestaoFinanceira.Services
                         break;
 
                     case TipoMovimentacao.Resgate:
-                        capital -= mov.Valor;
+                        // Resgate mexe APENAS no saldo: o capital investido nao diminui
+                        // e o rendimento nao e afetado.
                         resgatado += mov.Valor;
                         saldo -= mov.Valor;
                         break;
 
                     case TipoMovimentacao.Rendimento:
                         rendimento += mov.Valor;
+                        rendimentoDoEvento = mov.Valor;
                         saldo += mov.Valor;
                         break;
 
@@ -71,9 +83,17 @@ namespace GestaoFinanceira.Services
                         // ate agora e rendimento implicito acumulado no periodo.
                         var derivado = mov.Valor - saldo;
                         rendimento += derivado;
+                        rendimentoDoEvento = derivado;
                         rendimentoDerivado[mov.Id] = derivado;
                         saldo = mov.Valor;
                         break;
+                }
+
+                if (rendimentoDoEvento != 0m)
+                {
+                    var mesRef = new DateTime(mov.Data.Year, mov.Data.Month, 1);
+                    rendimentoPorMes.TryGetValue(mesRef, out var acumMes);
+                    rendimentoPorMes[mesRef] = acumMes + rendimentoDoEvento;
                 }
 
                 evolucao.Add(new PontoEvolucaoDTO
@@ -85,8 +105,19 @@ namespace GestaoFinanceira.Services
                 });
             }
 
-            var rentabilidade = capital > 0m
-                ? Math.Round(rendimento / capital * 100m, 2, MidpointRounding.AwayFromZero)
+            var historicoMensal = rendimentoPorMes
+                .Select(kv => new RendimentoMensalDTO
+                {
+                    Ano = kv.Key.Year,
+                    Mes = kv.Key.Month,
+                    Rendimento = kv.Value
+                })
+                .ToList();
+
+            // Media mensal em R$ considerando apenas os meses que tiveram rendimento.
+            var mesesComRendimento = historicoMensal.Count(h => h.Rendimento != 0m);
+            var rentabilidadeMediaMensal = mesesComRendimento > 0
+                ? Math.Round(rendimento / mesesComRendimento, 2, MidpointRounding.AwayFromZero)
                 : 0m;
 
             return new ResultadoCaixinha(
@@ -95,9 +126,10 @@ namespace GestaoFinanceira.Services
                 TotalAportado: aportado,
                 TotalResgatado: resgatado,
                 RendimentoAcumulado: rendimento,
-                RentabilidadePercentual: rentabilidade,
+                RentabilidadeMediaMensal: rentabilidadeMediaMensal,
                 RendimentoDerivadoPorMovimentacao: rendimentoDerivado,
-                Evolucao: evolucao);
+                Evolucao: evolucao,
+                HistoricoMensal: historicoMensal);
         }
 
         /// <summary>Monta o DTO de resumo de uma caixinha ja processada.</summary>
@@ -124,7 +156,8 @@ namespace GestaoFinanceira.Services
                 TotalAportado = resultado.TotalAportado,
                 TotalResgatado = resultado.TotalResgatado,
                 RendimentoAcumulado = resultado.RendimentoAcumulado,
-                RentabilidadePercentual = resultado.RentabilidadePercentual,
+                RentabilidadeMediaMensal = resultado.RentabilidadeMediaMensal,
+                HistoricoMensal = resultado.HistoricoMensal.ToList(),
                 PercentualMeta = percentualMeta,
                 QuantidadeMovimentacoes = caixinha.Movimentacoes.Count,
                 UltimaMovimentacao = caixinha.Movimentacoes.Count > 0

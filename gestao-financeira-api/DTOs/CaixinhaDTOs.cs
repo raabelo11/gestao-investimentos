@@ -49,8 +49,14 @@ namespace GestaoFinanceira.DTOs
         /// <summary>Rendimento acumulado (explicito + derivado de snapshots de saldo).</summary>
         public decimal RendimentoAcumulado { get; set; }
 
-        /// <summary>Rentabilidade percentual = rendimento / capital investido.</summary>
-        public decimal RentabilidadePercentual { get; set; }
+        /// <summary>
+        /// Rentabilidade = media, em R$, do quanto rendeu por mes, considerando
+        /// apenas os meses que tiveram rendimento.
+        /// </summary>
+        public decimal RentabilidadeMediaMensal { get; set; }
+
+        /// <summary>Rendimento em R$ mes a mes (para o historico mensal).</summary>
+        public List<RendimentoMensalDTO> HistoricoMensal { get; set; } = new();
 
         /// <summary>Percentual da meta atingido, quando ha meta definida.</summary>
         public decimal? PercentualMeta { get; set; }
@@ -58,5 +64,15 @@ namespace GestaoFinanceira.DTOs
         public int QuantidadeMovimentacoes { get; set; }
 
         public DateTime? UltimaMovimentacao { get; set; }
+    }
+
+    /// <summary>Rendimento consolidado de um mes especifico.</summary>
+    public class RendimentoMensalDTO
+    {
+        public int Ano { get; set; }
+        public int Mes { get; set; }
+
+        /// <summary>Quanto rendeu (em R$) no mes.</summary>
+        public decimal Rendimento { get; set; }
     }
 }

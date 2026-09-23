@@ -153,6 +153,15 @@ export class CaixinhaDetalheComponent implements OnInit {
     return this.tipos.find((t) => t.tipo === tipo)!;
   }
 
+  private static readonly MESES = [
+    'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
+  ];
+
+  protected nomeMes(mes: number): string {
+    return CaixinhaDetalheComponent.MESES[mes - 1] ?? String(mes);
+  }
+
   private hojeIso(): string {
     return new Date().toISOString().substring(0, 10);
   }

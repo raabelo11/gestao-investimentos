@@ -34,9 +34,9 @@
         </strong>
       </div>
       <div class="ms card">
-        <span class="faint">Rentabilidade</span>
-        <strong [class.pos]="c.rentabilidadePercentual >= 0" [class.neg]="c.rentabilidadePercentual < 0">
-          {{ c.rentabilidadePercentual | number: '1.2-2' }}%
+        <span class="faint">Rentabilidade (média/mês)</span>
+        <strong [class.pos]="c.rentabilidadeMediaMensal >= 0" [class.neg]="c.rentabilidadeMediaMensal < 0">
+          {{ c.rentabilidadeMediaMensal | currency: 'BRL' }}
         </strong>
       </div>
       @if (c.meta) {
@@ -47,6 +47,23 @@
         </div>
       }
     </div>
+
+    <!-- Historico mensal de rendimento -->
+    @if (c.historicoMensal.length > 0) {
+      <div class="section-head">
+        <h3>Rendimento por mês</h3>
+      </div>
+      <div class="hist-mensal card">
+        @for (m of c.historicoMensal; track m.ano + '-' + m.mes) {
+          <div class="hist-row">
+            <span class="muted">{{ nomeMes(m.mes) }}/{{ m.ano }}</span>
+            <strong [class.pos]="m.rendimento > 0" [class.neg]="m.rendimento < 0">
+              {{ m.rendimento | currency: 'BRL' }}
+            </strong>
+          </div>
+        }
+      </div>
+    }
 
     <!-- Acoes de lancamento -->
     <div class="lancar card">

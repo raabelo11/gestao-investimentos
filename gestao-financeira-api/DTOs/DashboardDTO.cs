@@ -6,7 +6,12 @@ namespace GestaoFinanceira.DTOs
         public decimal PatrimonioTotal { get; set; }
         public decimal CapitalInvestidoTotal { get; set; }
         public decimal RendimentoAcumuladoTotal { get; set; }
-        public decimal RentabilidadePercentualGeral { get; set; }
+
+        /// <summary>
+        /// Rentabilidade consolidada = media, em R$, do quanto rendeu por mes
+        /// (somando todas as caixinhas), sobre os meses que tiveram rendimento.
+        /// </summary>
+        public decimal RentabilidadeMediaMensalGeral { get; set; }
         public decimal TotalAportado { get; set; }
         public decimal TotalResgatado { get; set; }
         public int QuantidadeCaixinhas { get; set; }
@@ -16,6 +21,9 @@ namespace GestaoFinanceira.DTOs
 
         /// <summary>Serie temporal do patrimonio para grafico de evolucao.</summary>
         public List<PontoEvolucaoDTO> EvolucaoPatrimonio { get; set; } = new();
+
+        /// <summary>Rendimento consolidado (todas as caixinhas) mes a mes.</summary>
+        public List<RendimentoMensalDTO> HistoricoMensal { get; set; } = new();
     }
 
     /// <summary>Ponto da serie de evolucao do patrimonio.</summary>
