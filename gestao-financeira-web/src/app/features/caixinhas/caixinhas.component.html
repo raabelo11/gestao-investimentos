@@ -1,0 +1,135 @@
+<section class="page fade-in">
+  <header class="page-head">
+    <div>
+      <h1>Caixinhas</h1>
+      <p class="muted">Crie e gerencie seus potes de investimento.</p>
+    </div>
+    <div class="row gap-8">
+      <button class="btn btn-ghost btn-sm" (click)="alternarArquivadas()">
+        <span class="msr">{{ mostrarArquivadas() ? 'visibility_off' : 'inventory_2' }}</span>
+        {{ mostrarArquivadas() ? 'Ocultar arquivadas' : 'Ver arquivadas' }}
+      </button>
+      <button class="btn btn-primary btn-sm" (click)="abrirCriacao()">
+        <span class="msr">add</span> Nova caixinha
+      </button>
+    </div>
+  </header>
+
+  @if (carregando()) {
+    <div class="loading"><div class="spinner"></div></div>
+  } @else if (caixinhas().length === 0) {
+    <div class="empty-state card">
+      <span class="msr">savings</span>
+      <p>Nenhuma caixinha por aqui. Crie a primeira para começar.</p>
+      <button class="btn btn-primary btn-sm" (click)="abrirCriacao()">
+        <span class="msr">add</span> Criar caixinha
+      </button>
+    </div>
+  } @else {
+    <div class="lista">
+      @for (c of caixinhas(); track c.id) {
+        <a class="item card" [routerLink]="['/caixinhas', c.id]" [class.arquivada]="c.arquivada">
+          <div class="item-ico" [style.background]="c.cor + '22'" [style.color]="c.cor">
+            <span class="msr">{{ c.icone }}</span>
+          </div>
+
+          <div class="item-main">
+            <div class="item-title">
+              <strong>{{ c.nome }}</strong>
+              @if (c.arquivada) { <span class="badge badge-neutral">Arquivada</span> }
+            </div>
+            @if (c.descricao) { <span class="muted item-desc">{{ c.descricao }}</span> }
+            <span class="faint item-sub">{{ c.quantidadeMovimentacoes }} movimentação(ões)</span>
+          </div>
+
+          <div class="item-nums">
+            <div class="num">
+              <span class="faint">Saldo</span>
+              <strong>{{ c.saldoAtual | currency: 'BRL' }}</strong>
+            </div>
+            <div class="num">
+              <span class="faint">Rendimento</span>
+              <strong [class.pos]="c.rendimentoAcumulado >= 0" [class.neg]="c.rendimentoAcumulado < 0">
+                {{ c.rendimentoAcumulado | currency: 'BRL' }}
+              </strong>
+            </div>
+            <div class="num">
+              <span class="faint">Rentab.</span>
+              <strong [class.pos]="c.rentabilidadePercentual >= 0"
+                [class.neg]="c.rentabilidadePercentual < 0">
+                {{ c.rentabilidadePercentual | number: '1.2-2' }}%
+              </strong>
+            </div>
+          </div>
+
+          <div class="item-acoes">
+            <button class="btn-icon" title="Editar" (click)="abrirEdicao(c, $event)">
+              <span class="msr">edit</span>
+            </button>
+            <button class="btn-icon" [title]="c.arquivada ? 'Reativar' : 'Arquivar'"
+              (click)="arquivar(c, $event)">
+              <span class="msr">{{ c.arquivada ? 'unarchive' : 'archive' }}</span>
+            </button>
+            <button class="btn-icon danger" title="Excluir" (click)="excluir(c, $event)">
+              <span class="msr">delete</span>
+            </button>
+          </div>
+        </a>
+      }
+    </div>
+  }
+</section>
+
+@if (modalAberto()) {
+  <app-modal [titulo]="editandoId() ? 'Editar caixinha' : 'Nova caixinha'" (fechar)="fecharModal()">
+    <form [formGroup]="form" (ngSubmit)="salvar()" class="form">
+      <div class="field">
+        <label>Nome</label>
+        <input class="input" formControlName="nome" placeholder="Ex.: Reserva de emergência" />
+        @if (form.controls.nome.touched && form.controls.nome.invalid) {
+          <span class="field-error">Informe um nome.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label>Descrição <span class="faint">(opcional)</span></label>
+        <input class="input" formControlName="descricao" placeholder="Ex.: CDB no banco X" />
+      </div>
+
+      <div class="field">
+        <label>Meta <span class="faint">(opcional)</span></label>
+        <input class="input" type="number" formControlName="meta" placeholder="0,00" min="0" step="0.01" />
+      </div>
+
+      <div class="field">
+        <label>Cor</label>
+        <div class="swatches">
+          @for (cor of cores; track cor) {
+            <button type="button" class="swatch" [style.background]="cor"
+              [class.sel]="form.controls.cor.value === cor" (click)="selecionarCor(cor)"></button>
+          }
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Ícone</label>
+        <div class="icones">
+          @for (ic of icones; track ic) {
+            <button type="button" class="ico-opt" [class.sel]="form.controls.icone.value === ic"
+              (click)="selecionarIcone(ic)">
+              <span class="msr">{{ ic }}</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" (click)="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="salvando()">
+          <span class="msr">check</span>
+          {{ salvando() ? 'Salvando...' : 'Salvar' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+}

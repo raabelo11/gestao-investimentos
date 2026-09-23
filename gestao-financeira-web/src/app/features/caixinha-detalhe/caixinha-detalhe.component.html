@@ -1,0 +1,176 @@
+<section class="page fade-in">
+  <a routerLink="/caixinhas" class="voltar">
+    <span class="msr">arrow_back</span> Voltar para caixinhas
+  </a>
+
+  @if (carregando()) {
+    <div class="loading"><div class="spinner"></div></div>
+  } @else if (caixinha(); as c) {
+    <!-- Cabecalho -->
+    <header class="detalhe-head card">
+      <div class="dh-ico" [style.background]="c.cor + '22'" [style.color]="c.cor">
+        <span class="msr">{{ c.icone }}</span>
+      </div>
+      <div class="dh-main">
+        <h1>{{ c.nome }}</h1>
+        @if (c.descricao) { <p class="muted">{{ c.descricao }}</p> }
+      </div>
+      <div class="dh-saldo">
+        <span class="faint">Saldo atual</span>
+        <strong>{{ c.saldoAtual | currency: 'BRL' }}</strong>
+      </div>
+    </header>
+
+    <!-- Indicadores -->
+    <div class="mini-stats">
+      <div class="ms card">
+        <span class="faint">Capital investido</span>
+        <strong>{{ c.capitalInvestido | currency: 'BRL' }}</strong>
+      </div>
+      <div class="ms card">
+        <span class="faint">Rendimento acumulado</span>
+        <strong [class.pos]="c.rendimentoAcumulado >= 0" [class.neg]="c.rendimentoAcumulado < 0">
+          {{ c.rendimentoAcumulado | currency: 'BRL' }}
+        </strong>
+      </div>
+      <div class="ms card">
+        <span class="faint">Rentabilidade</span>
+        <strong [class.pos]="c.rentabilidadePercentual >= 0" [class.neg]="c.rentabilidadePercentual < 0">
+          {{ c.rentabilidadePercentual | number: '1.2-2' }}%
+        </strong>
+      </div>
+      @if (c.meta) {
+        <div class="ms card">
+          <span class="faint">Meta</span>
+          <strong>{{ c.meta | currency: 'BRL' }}</strong>
+          <span class="faint">{{ c.percentualMeta | number: '1.0-0' }}% atingido</span>
+        </div>
+      }
+    </div>
+
+    <!-- Acoes de lancamento -->
+    <div class="lancar card">
+      <div class="lancar-head">
+        <h3>Registrar movimentação</h3>
+        <p class="muted">Escolha o tipo de lançamento.</p>
+      </div>
+      <div class="lancar-botoes">
+        @for (t of tipos; track t.tipo) {
+          <button class="tipo-btn" (click)="abrirCriacao(t.tipo)" [style.--c]="t.cor">
+            <span class="tipo-ico"><span class="msr">{{ t.icone }}</span></span>
+            <span class="tipo-txt">
+              <strong>{{ t.rotulo }}</strong>
+              <span class="faint">{{ t.descricao }}</span>
+            </span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Historico -->
+    <div class="section-head">
+      <h3>Histórico de movimentações</h3>
+    </div>
+
+    @if (movimentacoes().length === 0) {
+      <div class="empty-state card">
+        <span class="msr">receipt_long</span>
+        <p>Nenhuma movimentação ainda. Comece com um aporte ou informe o saldo atual.</p>
+      </div>
+    } @else {
+      <div class="historico card">
+        @for (m of movimentacoes(); track m.id) {
+          <div class="mov">
+            <div class="mov-ico" [style.background]="metaDoTipo(m.tipo).cor + '22'"
+              [style.color]="metaDoTipo(m.tipo).cor">
+              <span class="msr">{{ metaDoTipo(m.tipo).icone }}</span>
+            </div>
+            <div class="mov-main">
+              <strong>{{ metaDoTipo(m.tipo).rotulo }}</strong>
+              <span class="faint">{{ m.data | date: 'dd/MM/yyyy' }}</span>
+              @if (m.observacao) { <span class="muted mov-obs">{{ m.observacao }}</span> }
+              @if (m.tipo === 'Saldo' && m.rendimentoDerivado != null) {
+                <span class="badge" [class.badge-success]="m.rendimentoDerivado >= 0"
+                  [class.badge-danger]="m.rendimentoDerivado < 0">
+                  <span class="msr">insights</span>
+                  Rendeu {{ m.rendimentoDerivado | currency: 'BRL' }}
+                </span>
+              }
+            </div>
+            <div class="mov-valor">
+              <strong [class]="metaDoTipo(m.tipo).tipo === 'Resgate' ? 'neg' : ''">
+                {{ m.tipo === 'Saldo' ? '=' : (m.tipo === 'Resgate' ? '-' : '+') }}
+                {{ m.valor | currency: 'BRL' }}
+              </strong>
+            </div>
+            <div class="mov-acoes">
+              <button class="btn-icon" title="Editar" (click)="abrirEdicao(m)">
+                <span class="msr">edit</span>
+              </button>
+              <button class="btn-icon danger" title="Excluir" (click)="excluir(m)">
+                <span class="msr">delete</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  } @else {
+    <div class="empty-state card">
+      <span class="msr">error</span>
+      <p>Caixinha não encontrada.</p>
+      <a routerLink="/caixinhas" class="btn btn-primary btn-sm">Voltar</a>
+    </div>
+  }
+</section>
+
+@if (modalAberto()) {
+  <app-modal
+    [titulo]="(editandoId() ? 'Editar ' : 'Registrar ') + metaTipo()?.rotulo"
+    (fechar)="fecharModal()"
+  >
+    <form [formGroup]="form" (ngSubmit)="salvar()" class="form">
+      <div class="field">
+        <label>Tipo</label>
+        <div class="tipo-tabs">
+          @for (t of tipos; track t.tipo) {
+            <button type="button" class="tab" [class.sel]="tipoSelecionado() === t.tipo"
+              [style.--c]="t.cor" (click)="trocarTipo(t.tipo)">
+              <span class="msr">{{ t.icone }}</span>
+              {{ t.rotulo }}
+            </button>
+          }
+        </div>
+        @if (metaTipo(); as mt) {
+          <span class="faint dica">{{ mt.descricao }}</span>
+        }
+      </div>
+
+      <div class="field">
+        <label>{{ tipoSelecionado() === 'Saldo' ? 'Saldo total atual' : 'Valor' }}</label>
+        <input class="input" type="number" formControlName="valor" placeholder="0,00" min="0" step="0.01" />
+        @if (form.controls.valor.touched && form.controls.valor.invalid) {
+          <span class="field-error">Informe um valor válido.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label>Data</label>
+        <input class="input" type="date" formControlName="data" />
+      </div>
+
+      <div class="field">
+        <label>Observação <span class="faint">(opcional)</span></label>
+        <input class="input" formControlName="observacao" placeholder="Anotação sobre o lançamento" />
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" (click)="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="salvando()">
+          <span class="msr">check</span>
+          {{ salvando() ? 'Salvando...' : 'Salvar' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+}

@@ -1,0 +1,49 @@
+<div class="shell" [class.menu-aberto]="menuAberto()">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><span class="msr">savings</span></div>
+      <div class="brand-text">
+        <strong>Gestão</strong>
+        <span>Financeira</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      @for (item of navItems; track item.path) {
+        <a
+          class="nav-item"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          (click)="fecharMenu()"
+        >
+          <span class="msr">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="hint">
+        <span class="msr">tips_and_updates</span>
+        <p>Lance o saldo do dia e o sistema calcula quanto rendeu.</p>
+      </div>
+    </div>
+  </aside>
+
+  <div class="backdrop" (click)="fecharMenu()"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="btn-icon menu-btn" (click)="alternarMenu()" aria-label="Menu">
+        <span class="msr">menu</span>
+      </button>
+      <div class="topbar-title">Controle de Investimentos</div>
+    </header>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>
+
+<app-toast-container />

@@ -1,0 +1,159 @@
+<section class="page fade-in">
+  <header class="page-head">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="muted">Visão consolidada do seu patrimônio investido.</p>
+    </div>
+    <button class="btn btn-ghost btn-sm" (click)="carregar()" [disabled]="carregando()">
+      <span class="msr">refresh</span> Atualizar
+    </button>
+  </header>
+
+  @if (carregando()) {
+    <div class="loading"><div class="spinner"></div></div>
+  } @else if (erro()) {
+    <div class="empty-state card">
+      <span class="msr">cloud_off</span>
+      <p>Não foi possível carregar os dados. Verifique se a API está no ar.</p>
+      <button class="btn btn-primary btn-sm" (click)="carregar()">Tentar novamente</button>
+    </div>
+  } @else if (dados(); as d) {
+    <!-- Cards de indicadores -->
+    <div class="stats">
+      <div class="stat card">
+        <div class="stat-ico" style="background: var(--primary-soft); color: #c7d0ff">
+          <span class="msr">account_balance</span>
+        </div>
+        <div class="stat-body">
+          <span class="stat-label">Patrimônio total</span>
+          <strong class="stat-value">{{ d.patrimonioTotal | currency: 'BRL' }}</strong>
+        </div>
+      </div>
+
+      <div class="stat card">
+        <div class="stat-ico" style="background: rgba(59,130,246,.14); color: #60a5fa">
+          <span class="msr">savings</span>
+        </div>
+        <div class="stat-body">
+          <span class="stat-label">Capital investido</span>
+          <strong class="stat-value">{{ d.capitalInvestidoTotal | currency: 'BRL' }}</strong>
+        </div>
+      </div>
+
+      <div class="stat card">
+        <div class="stat-ico" style="background: var(--success-soft); color: #4ade80">
+          <span class="msr">trending_up</span>
+        </div>
+        <div class="stat-body">
+          <span class="stat-label">Rendimento acumulado</span>
+          <strong class="stat-value" [class.pos]="d.rendimentoAcumuladoTotal > 0"
+            [class.neg]="d.rendimentoAcumuladoTotal < 0">
+            {{ d.rendimentoAcumuladoTotal | currency: 'BRL' }}
+          </strong>
+        </div>
+      </div>
+
+      <div class="stat card">
+        <div class="stat-ico" style="background: var(--warning-soft); color: #fbbf24">
+          <span class="msr">percent</span>
+        </div>
+        <div class="stat-body">
+          <span class="stat-label">Rentabilidade</span>
+          <strong class="stat-value" [class.pos]="d.rentabilidadePercentualGeral > 0"
+            [class.neg]="d.rentabilidadePercentualGeral < 0">
+            {{ d.rentabilidadePercentualGeral | number: '1.2-2' }}%
+          </strong>
+        </div>
+      </div>
+    </div>
+
+    @if (temCaixinhas()) {
+      <div class="grid-main">
+        <!-- Grafico -->
+        <div class="card panel">
+          <div class="panel-head">
+            <h3>Evolução do patrimônio</h3>
+          </div>
+          <app-evolucao-chart [dados]="d.evolucaoPatrimonio" />
+        </div>
+
+        <!-- Resumo lateral -->
+        <div class="card panel">
+          <div class="panel-head">
+            <h3>Composição</h3>
+          </div>
+          <div class="resumo">
+            <div class="resumo-row">
+              <span class="muted">Total aportado</span>
+              <strong>{{ d.totalAportado | currency: 'BRL' }}</strong>
+            </div>
+            <div class="resumo-row">
+              <span class="muted">Total resgatado</span>
+              <strong>{{ d.totalResgatado | currency: 'BRL' }}</strong>
+            </div>
+            <div class="resumo-row">
+              <span class="muted">Caixinhas ativas</span>
+              <strong>{{ d.quantidadeCaixinhas }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Caixinhas -->
+      <div class="section-head">
+        <h3>Suas caixinhas</h3>
+        <a routerLink="/caixinhas" class="btn btn-ghost btn-sm">
+          Gerenciar <span class="msr">arrow_forward</span>
+        </a>
+      </div>
+
+      <div class="caixinhas-grid">
+        @for (c of d.caixinhas; track c.id) {
+          <a class="cx card" [routerLink]="['/caixinhas', c.id]">
+            <div class="cx-head">
+              <div class="cx-ico" [style.background]="c.cor + '22'" [style.color]="c.cor">
+                <span class="msr">{{ c.icone }}</span>
+              </div>
+              <div class="cx-title">
+                <strong>{{ c.nome }}</strong>
+                @if (c.descricao) { <span class="muted">{{ c.descricao }}</span> }
+              </div>
+            </div>
+
+            <div class="cx-saldo">
+              <span class="muted">Saldo atual</span>
+              <strong>{{ c.saldoAtual | currency: 'BRL' }}</strong>
+            </div>
+
+            <div class="cx-foot">
+              <span class="badge" [class.badge-success]="c.rendimentoAcumulado >= 0"
+                [class.badge-danger]="c.rendimentoAcumulado < 0">
+                <span class="msr">{{ c.rendimentoAcumulado >= 0 ? 'trending_up' : 'trending_down' }}</span>
+                {{ c.rendimentoAcumulado | currency: 'BRL' }}
+              </span>
+              <span class="badge badge-neutral">{{ c.rentabilidadePercentual | number: '1.2-2' }}%</span>
+            </div>
+
+            @if (c.meta && c.percentualMeta != null) {
+              <div class="cx-meta">
+                <div class="meta-bar">
+                  <div class="meta-fill" [style.width.%]="corBarra(c.saldoAtual, c.meta)"
+                    [style.background]="c.cor"></div>
+                </div>
+                <span class="faint">{{ c.percentualMeta | number: '1.0-0' }}% da meta</span>
+              </div>
+            }
+          </a>
+        }
+      </div>
+    } @else {
+      <div class="empty-state card">
+        <span class="msr">savings</span>
+        <p>Você ainda não tem caixinhas. Crie a primeira para começar a acompanhar seus investimentos.</p>
+        <a routerLink="/caixinhas" class="btn btn-primary btn-sm">
+          <span class="msr">add</span> Criar caixinha
+        </a>
+      </div>
+    }
+  }
+</section>
