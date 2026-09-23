@@ -13,10 +13,13 @@ namespace GestaoFinanceira.Services
     ///               (o que ja foi investido continua contabilizado como investido)
     ///               e o rendimento nao e afetado.
     /// - Rendimento: aumenta saldo e rendimento acumulado (nao mexe no capital).
-    /// - Saldo:      foto do saldo total naquela data. O rendimento implicito e a
-    ///               diferenca entre o saldo informado e o saldo esperado ate entao;
-    ///               esse rendimento entra no acumulado. Assim, mesmo lancando o saldo
-    ///               esporadicamente, o sistema reconcilia "quanto rendeu ate hoje".
+    /// - Saldo:      foto do saldo total naquela data. O rendimento que ela
+    ///               representa e CONGELADO no momento do lancamento (campo
+    ///               <see cref="Movimentacao.RendimentoCongelado"/>) e nunca mais
+    ///               recalculado. Assim, aportes/resgates (mesmo retroativos) jamais
+    ///               alteram o rendimento. A foto apenas reposiciona o saldo para o
+    ///               valor informado. (Lancamentos legados sem valor congelado caem
+    ///               num fallback que deriva o rendimento uma unica vez.)
     ///
     /// Rentabilidade: media mensal em R$ do quanto rendeu por mes, considerando
     /// apenas os meses que tiveram rendimento (ver <see cref="RentabilidadeMediaMensal"/>).
@@ -79,9 +82,11 @@ namespace GestaoFinanceira.Services
                         break;
 
                     case TipoMovimentacao.Saldo:
-                        // Reconciliacao: o quanto o saldo informado excede o esperado
-                        // ate agora e rendimento implicito acumulado no periodo.
-                        var derivado = mov.Valor - saldo;
+                        // O rendimento desta foto e o valor CONGELADO no lancamento.
+                        // Nunca recalculamos a partir do saldo esperado, para que
+                        // aportes/resgates (mesmo retroativos) nao alterem o rendimento.
+                        // Fallback so para dados legados sem valor congelado.
+                        var derivado = mov.RendimentoCongelado ?? (mov.Valor - saldo);
                         rendimento += derivado;
                         rendimentoDoEvento = derivado;
                         rendimentoDerivado[mov.Id] = derivado;
@@ -130,6 +135,50 @@ namespace GestaoFinanceira.Services
                 RendimentoDerivadoPorMovimentacao: rendimentoDerivado,
                 Evolucao: evolucao,
                 HistoricoMensal: historicoMensal);
+        }
+
+        /// <summary>
+        /// Calcula o rendimento a CONGELAR para uma foto de saldo (tipo Saldo),
+        /// no momento em que ela e salva: saldo informado menos o saldo esperado
+        /// considerando apenas as demais movimentacoes ate a data da foto.
+        /// </summary>
+        /// <param name="saldoInformado">Saldo total digitado pelo usuario na foto.</param>
+        /// <param name="dataFoto">Data de competencia da foto.</param>
+        /// <param name="idFoto">Id da foto (0 se ainda nao persistida) para desempate/exclusao.</param>
+        /// <param name="demaisMovimentacoes">Todas as movimentacoes da caixinha (a propria foto e ignorada).</param>
+        public decimal CalcularRendimentoCongelado(
+            decimal saldoInformado,
+            DateTime dataFoto,
+            int idFoto,
+            IEnumerable<Movimentacao> demaisMovimentacoes)
+        {
+            var anteriores = demaisMovimentacoes
+                .Where(m => m.Id != idFoto)
+                .Where(m => m.Data < dataFoto || (m.Data == dataFoto && m.Id < idFoto))
+                .OrderBy(m => m.Data)
+                .ThenBy(m => m.Id);
+
+            decimal saldoEsperado = 0m;
+            foreach (var mov in anteriores)
+            {
+                switch (mov.Tipo)
+                {
+                    case TipoMovimentacao.Aporte:
+                        saldoEsperado += mov.Valor;
+                        break;
+                    case TipoMovimentacao.Resgate:
+                        saldoEsperado -= mov.Valor;
+                        break;
+                    case TipoMovimentacao.Rendimento:
+                        saldoEsperado += mov.Valor;
+                        break;
+                    case TipoMovimentacao.Saldo:
+                        saldoEsperado = mov.Valor;
+                        break;
+                }
+            }
+
+            return saldoInformado - saldoEsperado;
         }
 
         /// <summary>Monta o DTO de resumo de uma caixinha ja processada.</summary>

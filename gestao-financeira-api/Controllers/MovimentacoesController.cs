@@ -68,6 +68,10 @@ namespace GestaoFinanceira.Controllers
             _db.Movimentacoes.Add(movimentacao);
             await _db.SaveChangesAsync();
 
+            // Foto de saldo: congela o rendimento derivado agora, para que
+            // aportes/resgates futuros ou retroativos nunca o recalculem.
+            await CongelarRendimentoSeFotoDeSaldoAsync(movimentacao);
+
             var todas = await _db.Movimentacoes
                 .Where(m => m.CaixinhaId == caixinhaId)
                 .AsNoTracking()
@@ -95,7 +99,16 @@ namespace GestaoFinanceira.Controllers
             movimentacao.Data = input.Data;
             movimentacao.Observacao = input.Observacao?.Trim();
 
+            // Se deixou de ser foto de saldo, descarta o rendimento congelado.
+            if (movimentacao.Tipo != TipoMovimentacao.Saldo)
+            {
+                movimentacao.RendimentoCongelado = null;
+            }
+
             await _db.SaveChangesAsync();
+
+            // Recongela o rendimento se (ainda) e uma foto de saldo.
+            await CongelarRendimentoSeFotoDeSaldoAsync(movimentacao);
 
             var todas = await _db.Movimentacoes
                 .Where(m => m.CaixinhaId == caixinhaId)
@@ -121,6 +134,29 @@ namespace GestaoFinanceira.Controllers
             _db.Movimentacoes.Remove(movimentacao);
             await _db.SaveChangesAsync();
             return NoContent();
+        }
+
+        /// <summary>
+        /// Se a movimentacao for uma foto de saldo, calcula e persiste o rendimento
+        /// congelado (saldo informado - saldo esperado ate a data da foto). Deve ser
+        /// chamada DEPOIS que a movimentacao ja tem Id definitivo.
+        /// </summary>
+        private async Task CongelarRendimentoSeFotoDeSaldoAsync(Movimentacao foto)
+        {
+            if (foto.Tipo != TipoMovimentacao.Saldo)
+            {
+                return;
+            }
+
+            var demais = await _db.Movimentacoes
+                .Where(m => m.CaixinhaId == foto.CaixinhaId && m.Id != foto.Id)
+                .AsNoTracking()
+                .ToListAsync();
+
+            foto.RendimentoCongelado = _calculo.CalcularRendimentoCongelado(
+                foto.Valor, foto.Data, foto.Id, demais);
+
+            await _db.SaveChangesAsync();
         }
 
         private static MovimentacaoDTO MapearParaDTO(Movimentacao m, CalculoInvestimentoService.ResultadoCaixinha resultado)

@@ -22,6 +22,15 @@ namespace GestaoFinanceira.Model
         /// </summary>
         public decimal Valor { get; set; }
 
+        /// <summary>
+        /// Apenas para o tipo <see cref="TipoMovimentacao.Saldo"/>: o rendimento
+        /// derivado, CONGELADO no momento em que a foto de saldo foi lancada
+        /// (saldo informado - saldo esperado naquele instante). Depois de gravado,
+        /// aportes/resgates posteriores ou retroativos NUNCA recalculam este valor,
+        /// garantindo que aporte/resgate jamais alterem o rendimento.
+        /// </summary>
+        public decimal? RendimentoCongelado { get; set; }
+
         /// <summary>Data de competencia informada pelo usuario (dia do evento).</summary>
         public DateTime Data { get; set; }
 
