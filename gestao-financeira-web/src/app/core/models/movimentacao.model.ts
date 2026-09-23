@@ -43,13 +43,6 @@ export const TIPOS_MOVIMENTACAO: TipoMovimentacaoMeta[] = [
     cor: '#f97316',
   },
   {
-    tipo: 'Rendimento',
-    rotulo: 'Rendimento',
-    descricao: 'Rendimento lançado para uma data específica',
-    icone: 'trending_up',
-    cor: '#3b82f6',
-  },
-  {
     tipo: 'Saldo',
     rotulo: 'Saldo do dia',
     descricao: 'Informe o saldo total atual — o sistema calcula quanto rendeu',

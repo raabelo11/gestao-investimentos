@@ -65,14 +65,14 @@ namespace GestaoFinanceira.Services
                     case TipoMovimentacao.Aporte:
                         capital += mov.Valor;
                         aportado += mov.Valor;
-                        saldo += mov.Valor;
+                        saldo = saldo + mov.Valor;
                         break;
 
                     case TipoMovimentacao.Resgate:
                         // Resgate mexe APENAS no saldo: o capital investido nao diminui
                         // e o rendimento nao e afetado.
                         resgatado += mov.Valor;
-                        saldo -= mov.Valor;
+                        saldo = saldo - mov.Valor;
                         break;
 
                     case TipoMovimentacao.Rendimento:
