@@ -14,6 +14,7 @@ export interface Caixinha {
   arquivada: boolean;
   criadaEm: string;
   saldoAtual: number;
+  saldoInicial?: number | null;
   capitalInvestido: number;
   totalAportado: number;
   totalResgatado: number;
@@ -32,4 +33,5 @@ export interface CaixinhaInput {
   cor: string;
   icone: string;
   meta?: number | null;
+  saldoInicial?: number | null;
 }

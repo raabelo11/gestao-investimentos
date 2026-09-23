@@ -69,7 +69,8 @@ namespace GestaoFinanceira.Controllers
                 Cor = input.Cor,
                 Icone = input.Icone,
                 Meta = input.Meta,
-                CriadaEm = DateTime.UtcNow
+                CriadaEm = DateTime.UtcNow,
+                SaldoInicial = input.SaldoInicial,
             };
 
             _db.Caixinhas.Add(caixinha);

@@ -200,7 +200,7 @@ namespace GestaoFinanceira.Services
                 Meta = caixinha.Meta,
                 Arquivada = caixinha.Arquivada,
                 CriadaEm = caixinha.CriadaEm,
-                SaldoAtual = resultado.SaldoAtual,
+                SaldoAtual = caixinha.SaldoInicial + resultado.SaldoAtual,
                 CapitalInvestido = resultado.CapitalInvestido,
                 TotalAportado = resultado.TotalAportado,
                 TotalResgatado = resultado.TotalResgatado,
@@ -211,7 +211,8 @@ namespace GestaoFinanceira.Services
                 QuantidadeMovimentacoes = caixinha.Movimentacoes.Count,
                 UltimaMovimentacao = caixinha.Movimentacoes.Count > 0
                     ? caixinha.Movimentacoes.Max(m => m.Data)
-                    : null
+                    : null,
+                SaldoInicial = caixinha.SaldoInicial
             };
         }
     }

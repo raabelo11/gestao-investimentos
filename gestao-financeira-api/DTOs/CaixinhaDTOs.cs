@@ -20,6 +20,8 @@ namespace GestaoFinanceira.DTOs
 
         [Range(0, double.MaxValue, ErrorMessage = "A meta nao pode ser negativa.")]
         public decimal? Meta { get; set; }
+
+        public decimal SaldoInicial { get; set; }
     }
 
     /// <summary>Representacao de leitura de uma caixinha com seus indicadores calculados.</summary>
@@ -64,6 +66,7 @@ namespace GestaoFinanceira.DTOs
         public int QuantidadeMovimentacoes { get; set; }
 
         public DateTime? UltimaMovimentacao { get; set; }
+        public decimal SaldoInicial { get; set; }
     }
 
     /// <summary>Rendimento consolidado de um mes especifico.</summary>

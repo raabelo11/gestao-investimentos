@@ -59,6 +59,7 @@ export class CaixinhasComponent implements OnInit {
   protected readonly form = this.fb.nonNullable.group({
     nome: ['', [Validators.required, Validators.maxLength(80)]],
     descricao: [''],
+    saldoInicial: [null as number | null, [Validators.min(0)]],
     cor: [CORES[0]],
     icone: [ICONES[0]],
     meta: [null as number | null],
@@ -132,6 +133,7 @@ export class CaixinhasComponent implements OnInit {
       cor: valores.cor,
       icone: valores.icone,
       meta: valores.meta ? Number(valores.meta) : null,
+      saldoInicial: valores.saldoInicial ? Number(valores.saldoInicial) : null,
     };
 
     this.salvando.set(true);

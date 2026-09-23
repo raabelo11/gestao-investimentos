@@ -31,6 +31,7 @@ namespace GestaoFinanceira.Model
         public bool Arquivada { get; set; }
 
         public DateTime CriadaEm { get; set; } = DateTime.UtcNow;
+        public decimal SaldoInicial { get; set; } = 0m;
 
         public List<Movimentacao> Movimentacoes { get; set; } = new();
     }
