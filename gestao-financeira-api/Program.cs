@@ -44,40 +44,6 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
-
-    // Backfill idempotente: congela o rendimento das fotos de saldo legadas
-    // (RendimentoCongelado ainda nulo), preservando o valor historico correto.
-    var calculo = scope.ServiceProvider.GetRequiredService<CalculoInvestimentoService>();
-    CongelarFotosLegadas(db, calculo);
-}
-
-static void CongelarFotosLegadas(AppDbContext db, CalculoInvestimentoService calculo)
-{
-    var fotosPendentes = db.Movimentacoes
-        .Where(m => m.Tipo == GestaoFinanceira.Model.TipoMovimentacao.Saldo
-                    && m.RendimentoCongelado == null)
-        .ToList();
-
-    if (fotosPendentes.Count == 0)
-    {
-        return;
-    }
-
-    // Agrupa por caixinha para calcular o saldo esperado usando as demais movimentacoes.
-    foreach (var grupo in fotosPendentes.GroupBy(m => m.CaixinhaId))
-    {
-        var todasDaCaixinha = db.Movimentacoes
-            .Where(m => m.CaixinhaId == grupo.Key)
-            .ToList();
-
-        foreach (var foto in grupo)
-        {
-            foto.RendimentoCongelado = calculo.CalcularRendimentoCongelado(
-                foto.Valor, foto.Data, foto.Id, todasDaCaixinha);
-        }
-    }
-
-    db.SaveChanges();
 }
 
 app.UseCors(p => p

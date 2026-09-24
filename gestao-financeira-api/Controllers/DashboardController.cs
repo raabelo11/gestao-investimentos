@@ -35,7 +35,7 @@ namespace GestaoFinanceira.Controllers
 
             foreach (var caixinha in caixinhas)
             {
-                var resultado = _calculo.Processar(caixinha.Movimentacoes);
+                var resultado = _calculo.Processar(caixinha.Movimentacoes, caixinha.SaldoInicial);
                 resumos.Add(_calculo.MontarResumo(caixinha, resultado));
                 evolucoesPorCaixinha.Add(resultado.Evolucao);
                 AcumularHistoricoMensal(rendimentoPorMes, resultado.HistoricoMensal);

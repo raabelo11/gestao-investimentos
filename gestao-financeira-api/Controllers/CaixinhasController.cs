@@ -33,7 +33,7 @@ namespace GestaoFinanceira.Controllers
             var caixinhas = await query.AsNoTracking().ToListAsync();
 
             var resumos = caixinhas
-                .Select(c => _calculo.MontarResumo(c, _calculo.Processar(c.Movimentacoes)))
+                .Select(c => _calculo.MontarResumo(c, _calculo.Processar(c.Movimentacoes, c.SaldoInicial)))
                 .OrderByDescending(r => r.SaldoAtual)
                 .ToList();
 
@@ -54,7 +54,7 @@ namespace GestaoFinanceira.Controllers
                 return NotFound($"Caixinha {id} nao encontrada.");
             }
 
-            var resultado = _calculo.Processar(caixinha.Movimentacoes);
+            var resultado = _calculo.Processar(caixinha.Movimentacoes, caixinha.SaldoInicial);
             return Ok(_calculo.MontarResumo(caixinha, resultado));
         }
 
@@ -76,7 +76,7 @@ namespace GestaoFinanceira.Controllers
             _db.Caixinhas.Add(caixinha);
             await _db.SaveChangesAsync();
 
-            var resultado = _calculo.Processar(caixinha.Movimentacoes);
+            var resultado = _calculo.Processar(caixinha.Movimentacoes, caixinha.SaldoInicial);
             var resumo = _calculo.MontarResumo(caixinha, resultado);
             return CreatedAtAction(nameof(ObterPorId), new { id = caixinha.Id }, resumo);
         }
@@ -102,7 +102,7 @@ namespace GestaoFinanceira.Controllers
 
             await _db.SaveChangesAsync();
 
-            var resultado = _calculo.Processar(caixinha.Movimentacoes);
+            var resultado = _calculo.Processar(caixinha.Movimentacoes, caixinha.SaldoInicial);
             return Ok(_calculo.MontarResumo(caixinha, resultado));
         }
 
@@ -122,7 +122,7 @@ namespace GestaoFinanceira.Controllers
             caixinha.Arquivada = arquivar;
             await _db.SaveChangesAsync();
 
-            var resultado = _calculo.Processar(caixinha.Movimentacoes);
+            var resultado = _calculo.Processar(caixinha.Movimentacoes, caixinha.SaldoInicial);
             return Ok(_calculo.MontarResumo(caixinha, resultado));
         }
 

@@ -3,27 +3,6 @@ using GestaoFinanceira.Model;
 
 namespace GestaoFinanceira.Services
 {
-    /// <summary>
-    /// Motor de calculo do historico de uma caixinha. Percorre as movimentacoes
-    /// em ordem cronologica montando um "livro-razao" e derivando os indicadores.
-    ///
-    /// Regras por tipo:
-    /// - Aporte:     aumenta capital investido e saldo.
-    /// - Resgate:    diminui APENAS o saldo. O capital investido nao diminui
-    ///               (o que ja foi investido continua contabilizado como investido)
-    ///               e o rendimento nao e afetado.
-    /// - Rendimento: aumenta saldo e rendimento acumulado (nao mexe no capital).
-    /// - Saldo:      foto do saldo total naquela data. O rendimento que ela
-    ///               representa e CONGELADO no momento do lancamento (campo
-    ///               <see cref="Movimentacao.RendimentoCongelado"/>) e nunca mais
-    ///               recalculado. Assim, aportes/resgates (mesmo retroativos) jamais
-    ///               alteram o rendimento. A foto apenas reposiciona o saldo para o
-    ///               valor informado. (Lancamentos legados sem valor congelado caem
-    ///               num fallback que deriva o rendimento uma unica vez.)
-    ///
-    /// Rentabilidade: media mensal em R$ do quanto rendeu por mes, considerando
-    /// apenas os meses que tiveram rendimento (ver <see cref="RentabilidadeMediaMensal"/>).
-    /// </summary>
     public class CalculoInvestimentoService
     {
         /// <summary>Resultado do processamento cronologico de uma caixinha.</summary>
@@ -38,14 +17,14 @@ namespace GestaoFinanceira.Services
             IReadOnlyList<PontoEvolucaoDTO> Evolucao,
             IReadOnlyList<RendimentoMensalDTO> HistoricoMensal);
 
-        public ResultadoCaixinha Processar(IEnumerable<Movimentacao> movimentacoes)
+        public ResultadoCaixinha Processar(IEnumerable<Movimentacao> movimentacoes, decimal saldoInicial)
         {
             var ordenadas = movimentacoes
                 .OrderBy(m => m.Data)
                 .ThenBy(m => m.Id)
                 .ToList();
 
-            decimal saldo = 0m;
+            decimal saldo = saldoInicial;
             decimal capital = 0m;
             decimal aportado = 0m;
             decimal resgatado = 0m;
@@ -53,7 +32,6 @@ namespace GestaoFinanceira.Services
 
             var rendimentoDerivado = new Dictionary<int, decimal>();
             var evolucao = new List<PontoEvolucaoDTO>();
-            // Rendimento (explicito + derivado) somado por mes de competencia.
             var rendimentoPorMes = new SortedDictionary<DateTime, decimal>();
 
             foreach (var mov in ordenadas)
@@ -69,28 +47,15 @@ namespace GestaoFinanceira.Services
                         break;
 
                     case TipoMovimentacao.Resgate:
-                        // Resgate mexe APENAS no saldo: o capital investido nao diminui
-                        // e o rendimento nao e afetado.
                         resgatado += mov.Valor;
                         saldo = saldo - mov.Valor;
                         break;
 
-                    case TipoMovimentacao.Rendimento:
-                        rendimento += mov.Valor;
-                        rendimentoDoEvento = mov.Valor;
-                        saldo += mov.Valor;
-                        break;
-
                     case TipoMovimentacao.Saldo:
-                        // O rendimento desta foto e o valor CONGELADO no lancamento.
-                        // Nunca recalculamos a partir do saldo esperado, para que
-                        // aportes/resgates (mesmo retroativos) nao alterem o rendimento.
-                        // Fallback so para dados legados sem valor congelado.
-                        var derivado = mov.RendimentoCongelado ?? (mov.Valor - saldo);
+                        var derivado = mov.Valor - saldo;
                         rendimento += derivado;
                         rendimentoDoEvento = derivado;
                         rendimentoDerivado[mov.Id] = derivado;
-                        saldo = mov.Valor;
                         break;
                 }
 
@@ -137,57 +102,14 @@ namespace GestaoFinanceira.Services
                 HistoricoMensal: historicoMensal);
         }
 
-        /// <summary>
-        /// Calcula o rendimento a CONGELAR para uma foto de saldo (tipo Saldo),
-        /// no momento em que ela e salva: saldo informado menos o saldo esperado
-        /// considerando apenas as demais movimentacoes ate a data da foto.
-        /// </summary>
-        /// <param name="saldoInformado">Saldo total digitado pelo usuario na foto.</param>
-        /// <param name="dataFoto">Data de competencia da foto.</param>
-        /// <param name="idFoto">Id da foto (0 se ainda nao persistida) para desempate/exclusao.</param>
-        /// <param name="demaisMovimentacoes">Todas as movimentacoes da caixinha (a propria foto e ignorada).</param>
-        public decimal CalcularRendimentoCongelado(
-            decimal saldoInformado,
-            DateTime dataFoto,
-            int idFoto,
-            IEnumerable<Movimentacao> demaisMovimentacoes)
-        {
-            var anteriores = demaisMovimentacoes
-                .Where(m => m.Id != idFoto)
-                .Where(m => m.Data < dataFoto || (m.Data == dataFoto && m.Id < idFoto))
-                .OrderBy(m => m.Data)
-                .ThenBy(m => m.Id);
-
-            decimal saldoEsperado = 0m;
-            foreach (var mov in anteriores)
-            {
-                switch (mov.Tipo)
-                {
-                    case TipoMovimentacao.Aporte:
-                        saldoEsperado += mov.Valor;
-                        break;
-                    case TipoMovimentacao.Resgate:
-                        saldoEsperado -= mov.Valor;
-                        break;
-                    case TipoMovimentacao.Rendimento:
-                        saldoEsperado += mov.Valor;
-                        break;
-                    case TipoMovimentacao.Saldo:
-                        saldoEsperado = mov.Valor;
-                        break;
-                }
-            }
-
-            return saldoInformado - saldoEsperado;
-        }
-
         /// <summary>Monta o DTO de resumo de uma caixinha ja processada.</summary>
         public CaixinhaResumoDTO MontarResumo(Caixinha caixinha, ResultadoCaixinha resultado)
         {
+            decimal saldoAtual = resultado.SaldoAtual;
             decimal? percentualMeta = null;
             if (caixinha.Meta is > 0m)
             {
-                percentualMeta = Math.Round(resultado.SaldoAtual / caixinha.Meta.Value * 100m, 2, MidpointRounding.AwayFromZero);
+                percentualMeta = Math.Round(saldoAtual / caixinha.Meta.Value * 100m, 2, MidpointRounding.AwayFromZero);
             }
 
             return new CaixinhaResumoDTO
@@ -200,7 +122,7 @@ namespace GestaoFinanceira.Services
                 Meta = caixinha.Meta,
                 Arquivada = caixinha.Arquivada,
                 CriadaEm = caixinha.CriadaEm,
-                SaldoAtual = caixinha.SaldoInicial + resultado.SaldoAtual,
+                SaldoAtual = saldoAtual,
                 CapitalInvestido = resultado.CapitalInvestido,
                 TotalAportado = resultado.TotalAportado,
                 TotalResgatado = resultado.TotalResgatado,

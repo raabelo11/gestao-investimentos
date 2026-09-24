@@ -35,10 +35,6 @@ namespace GestaoFinanceira.Data
                     .HasConversion(
                         v => v.ToString(System.Globalization.CultureInfo.InvariantCulture),
                         v => decimal.Parse(v, System.Globalization.CultureInfo.InvariantCulture));
-                entity.Property(m => m.RendimentoCongelado)
-                    .HasConversion(
-                        v => v.HasValue ? v.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : null,
-                        v => string.IsNullOrEmpty(v) ? (decimal?)null : decimal.Parse(v, System.Globalization.CultureInfo.InvariantCulture));
                 entity.HasOne(m => m.Caixinha)
                     .WithMany(c => c.Movimentacoes)
                     .HasForeignKey(m => m.CaixinhaId)
