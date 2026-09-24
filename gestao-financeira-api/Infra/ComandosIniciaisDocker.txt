@@ -27,3 +27,7 @@ docker run -d \
   -e ConnectionStrings__DefaultConnection="Data Source=db/gestaofinanceira.db" \
   -v gestaofinanceira-db:/app/db \
   {NOME DA IMAGEM LATEST}
+
+
+Util - Backup do volume persistente.
+docker cp gestao-investimentos-api:/app/db/gestaofinanceira.db ~/gestaofinanceira-backup-$(date +%Y%m%d).db
