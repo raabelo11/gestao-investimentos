@@ -41,21 +41,29 @@ namespace GestaoFinanceira.Services
                 switch (mov.Tipo)
                 {
                     case TipoMovimentacao.Aporte:
-                        capital += mov.Valor;
                         aportado += mov.Valor;
-                        saldo = saldo + mov.Valor;
+                        capital += mov.Valor;
+                        saldo += mov.Valor;
                         break;
 
                     case TipoMovimentacao.Resgate:
                         resgatado += mov.Valor;
-                        saldo = saldo - mov.Valor;
+                        capital -= mov.Valor;
+                        saldo -= mov.Valor;
+                        break;
+
+                    case TipoMovimentacao.Rendimento:
+                        rendimento += mov.Valor;
+                        saldo += mov.Valor;
+                        rendimentoDoEvento = mov.Valor;
                         break;
 
                     case TipoMovimentacao.Saldo:
-                        var derivado = mov.Valor - saldo;
-                        rendimento += derivado;
-                        rendimentoDoEvento = derivado;
-                        rendimentoDerivado[mov.Id] = derivado;
+                        var delta = mov.Valor - saldo;
+                        rendimento += delta;
+                        saldo += delta;
+                        rendimentoDoEvento = delta;
+                        rendimentoDerivado[mov.Id] = delta;
                         break;
                 }
 

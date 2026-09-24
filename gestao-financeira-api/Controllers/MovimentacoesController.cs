@@ -76,7 +76,11 @@ namespace GestaoFinanceira.Controllers
                 .Where(m => m.CaixinhaId == caixinhaId)
                 .AsNoTracking()
                 .ToListAsync();
-            var resultado = _calculo.Processar(todas, 0m);
+            var saldoInicial = await _db.Caixinhas
+                .Where(c => c.Id == caixinhaId)
+                .Select(c => c.SaldoInicial)
+                .FirstOrDefaultAsync();
+            var resultado = _calculo.Processar(todas, saldoInicial);
 
             return CreatedAtAction(nameof(Listar), new { caixinhaId },
                 MapearParaDTO(movimentacao, resultado));
@@ -105,7 +109,11 @@ namespace GestaoFinanceira.Controllers
                 .Where(m => m.CaixinhaId == caixinhaId)
                 .AsNoTracking()
                 .ToListAsync();
-            var resultado = _calculo.Processar(todas, 0m);
+            var saldoInicial = await _db.Caixinhas
+                .Where(c => c.Id == caixinhaId)
+                .Select(c => c.SaldoInicial)
+                .FirstOrDefaultAsync();
+            var resultado = _calculo.Processar(todas, saldoInicial);
 
             return Ok(MapearParaDTO(movimentacao, resultado));
         }
