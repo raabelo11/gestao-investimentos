@@ -48,7 +48,7 @@ namespace GestaoFinanceira.Services
 
                     case TipoMovimentacao.Resgate:
                         resgatado += mov.Valor;
-                        capital -= mov.Valor;
+                        //capital -= mov.Valor;
                         saldo -= mov.Valor;
                         break;
 
