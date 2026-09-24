@@ -1,0 +1,29 @@
+﻿## COMANDOS INICIAIS DOCKER (UBUNTU LOCAL)
+
+1 - Login no Docker Hub (necessário apenas se for usar o push).
+docker login -u {SEU USUARIO DOCKERHUB}
+
+2 - Build da imagem.
+docker build -t {NOME DA IMAGEM LATEST} .
+
+3 - Push pro Docker Hub (Opcional).
+docker push {REPOSITORIO DOCKERHUB}
+
+4 - Criar o volume persistente (só na primeira vez).
+docker volume create gestaofinanceira-db
+
+5 - Ajustar permissão do volume (só na primeira vez).
+docker run --rm -v gestaofinanceira-db:/app/db --user root --entrypoint sh {REPOSITORIO DA IMAGEM} -c "chown -R app:app /app/db"
+
+6 - Parar e remover container antigo (se já existir).
+docker stop gestao-investimentos-api
+docker rm gestao-investimentos-api
+
+7 - Rodar o container.
+docker run -d \
+  --name gestao-investimentos-api \
+  -p 8080:8080 \
+  -e ASPNETCORE_ENVIRONMENT=Development \
+  -e ConnectionStrings__DefaultConnection="Data Source=db/gestaofinanceira.db" \
+  -v gestaofinanceira-db:/app/db \
+  {NOME DA IMAGEM LATEST}
